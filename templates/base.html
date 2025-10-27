@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ title or "Smart-RAG Chat" }}{% endblock %}</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    {% block head_extra %}{% endblock %}
+
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="logo">
+                <span class="logo-icon">🤖</span>
+                Smart-RAG Chat
+            </h1>
+            <div class="header-actions">
+                <button id="theme-toggle" class="btn btn-icon" title="다크모드 토글">
+                    <span class="theme-icon">🌙</span>
+                </button>
+                <button id="settings-btn" class="btn btn-icon" title="설정">
+                    <span class="settings-icon">⚙️</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p>&copy; 2024 Smart-RAG Chat v{{ version or "1.0.0" }}</p>
+            <div class="footer-links">
+                <a href="/docs" target="_blank">API 문서</a>
+                <a href="/health" target="_blank">상태 확인</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Marked.js (Markdown → HTML) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+
+    <!-- DOMPurify (XSS 방지) -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+
+    <!-- JavaScript -->
+    <script src="/static/js/main.js"></script>
+    {% block scripts_extra %}{% endblock %}
+</body>
+</html>
