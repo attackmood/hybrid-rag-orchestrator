@@ -1,2 +1,2 @@
-# smart-rag-orchestrator
+# hybrid-rag-orchestrator
 Hybrid RAG Orchestrator: Multi-source intelligent query routing with MCP, Google Search, and dynamic PDF indexing
