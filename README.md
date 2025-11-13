@@ -59,7 +59,7 @@
 
 ---
 
-## 🎯 핵심 비즈니스 로직
+## 🎯 핵심 워크플로우
 
 1. **의도 분석**: LLM이 사용자 쿼리를 분석하여 필요한 도구 선택
 2. **병렬 실행**: 선택된 도구들을 동시에 실행
@@ -67,6 +67,56 @@
 4. **적응형 통합**: 복잡도에 따라 다른 방식으로 결과 통합
    - 간단한 쿼리: 직접 반환
    - 복잡한 쿼리: LLM으로 통합
+
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant API as FastAPI
+    participant HR as HybridRouter
+    participant LLM as Ollama LLM
+    participant TR as ToolsRegistry
+    participant T as Tools
+    
+    U->>API: POST /api/chat/query
+    API->>HR: process_query(query)
+    
+    Note over HR: 1. 쿼리 분석 단계
+    HR->>HR: _calculate_complexity()
+    HR->>LLM: _llm_intent_analysis()
+    LLM-->>HR: intent_analysis JSON
+    
+    Note over HR: 2. 도구 선택 단계
+    HR->>HR: _select_tools_with_llm()
+    HR->>TR: get_tools()
+    
+    Note over HR: 3. 병렬 실행 단계
+    HR->>T: parallel_execution()
+    par Tool 1
+        T->>T: weather_tool()
+    and Tool 2
+        T->>T: web_search_tool()
+    and Tool 3
+        T->>T: knowledge_base_tool()
+    end
+    
+    Note over HR: 4. 점수 부여 단계
+    HR->>HR: _score_results()
+    
+    Note over HR: 5. 결과 통합 단계
+    HR->>HR: _integrate_results()
+    alt 복잡도 < 0.3
+        HR->>HR: 직접 답변 반환
+    else 복잡도 > 0.5
+        HR->>LLM: _integrate_with_llm()
+        LLM-->>HR: 통합된 답변
+    else 중간 복잡도
+        HR->>HR: 점수 기반 나열
+    end
+    
+    HR-->>API: final_answer
+    API-->>U: ChatResponse
+```
 
 
 ---
@@ -96,74 +146,10 @@
 - **해결**: 복잡도 기반 적응형 통합 전략
 - **결과**: 간단한 쿼리는 직접 반환, 복잡한 쿼리는 LLM 통합
  
----
 
-## 🏗️ 전체 아키텍처
 
-```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        UI[Web UI<br/>FastAPI + Jinja2]
-    end
-    
-    subgraph "API Layer"
-        API[FastAPI Server<br/>RESTful API]
-        CHAT[Chat API<br/>/api/chat]
-        HEALTH[Health API<br/>/api/health]
-    end
-    
-    subgraph "Core Orchestration Layer"
-        HR[HybridRouter<br/>LangGraph StateGraph]
-        TR[ToolsRegistry<br/>도구 관리]
-    end
-    
-    subgraph "LLM Layer"
-        OLLAMA[Ollama Client<br/>LangChain 기반]
-        MODEL[LLM Model<br/>llama3.1:8b]
-    end
-    
-    subgraph "Tool Layer"
-        subgraph "External Services"
-            GS[Google Search<br/>LangChain API]
-            MCP[MCP Services<br/>WebSocket JSON-RPC]
-        end
-        
-        subgraph "RAG System"
-            VS[VectorSearchManager<br/>통합 검색]
-            CHROMA[ChromaDB<br/>영구 저장소]
-            PDF[PDFProcessor<br/>실시간 처리]
-        end
-        
-        subgraph "Utility Tools"
-            CALC[Calculator<br/>수학 계산]
-            REASON[Reasoning<br/>논리적 추론]
-        end
-    end
-    
-    subgraph "Data Layer"
-        EMBED[Korean Embedding<br/>jhgan/ko-sbert-nli]
-        CACHE[Cache System<br/>임베딩 캐시]
-        LOGS[Logging<br/>Loguru]
-    end
-    
-    UI --> API
-    API --> CHAT
-    API --> HEALTH
-    CHAT --> HR
-    HR --> TR
-    HR --> OLLAMA
-    OLLAMA --> MODEL
-    TR --> GS
-    TR --> MCP
-    TR --> VS
-    TR --> CALC
-    TR --> REASON
-    VS --> CHROMA
-    VS --> PDF
-    VS --> EMBED
-    EMBED --> CACHE
-    HR --> LOGS
-```
+
+
 
 ---
 
