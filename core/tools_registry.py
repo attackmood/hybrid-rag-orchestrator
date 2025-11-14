@@ -211,20 +211,56 @@ class ToolsRegistry:
 
                 from services.rag import search_rag_async
 
+                # 유사도 임계값을 0.6으로 설정 (기본값 0.5보다 높지만 0.7보다 낮음)
+                # 0.689 같은 점수도 통과할 수 있도록 조정
                 results = await search_rag_async(
-                    query=query, vector_manager=self.rag_client, max_results=3
+                    query=query,
+                    vector_manager=self.rag_client,
+                    max_results=3,
+                    similarity_threshold=0.5,  # 임계값 조정: 0.7 → 0.6
                 )
 
                 if not results:
                     return "관련 문서를 찾을 수 없습니다."
 
+                # 구조화된 데이터 형식으로 변환 (메타데이터 포함)
                 formatted_results = []
-                for result in results:
-                    formatted_results.append(
-                        f"📄 {result.content} (신뢰도: {result.similarity_score:.2f})"
+                for idx, result in enumerate(results, 1):
+                    # 소스 정보 구성
+                    source_parts = [f"소스 {idx}"]
+                    
+                    # 소스 타입 정보
+                    source_type_kr = {
+                        "chroma": "저장된 문서",
+                        "pdf_realtime": "실시간 PDF"
+                    }.get(result.source_type, result.source_type)
+                    source_parts.append(f"[{source_type_kr}]")
+                    
+                    # 메타데이터 정보 추출
+                    metadata_info = []
+                    if result.metadata:
+                        if "filename" in result.metadata:
+                            metadata_info.append(f"파일: {result.metadata['filename']}")
+                        if "pdf_filename" in result.metadata:
+                            metadata_info.append(f"파일: {result.metadata['pdf_filename']}")
+                        if "page" in result.metadata:
+                            metadata_info.append(f"페이지: {result.metadata['page']}")
+                        if "chunk_index" in result.metadata:
+                            metadata_info.append(f"청크: {result.metadata['chunk_index']}")
+                    
+                    # 구조화된 형식으로 조합
+                    source_header = " | ".join(source_parts)
+                    if metadata_info:
+                        source_header += f" ({', '.join(metadata_info)})"
+                    
+                    formatted_result = (
+                        f"{source_header}\n"
+                        f"유사도 점수: {result.similarity_score:.3f} | 순위: {result.rank} | 길이: {result.context_length}자\n"
+                        f"내용:\n{result.content}"
                     )
+                    formatted_results.append(formatted_result)
 
-                return "\n\n".join(formatted_results)
+                return "\n\n---\n\n".join(formatted_results)
 
             except Exception as e:
                 return f"지식베이스 검색 오류: {str(e)}"

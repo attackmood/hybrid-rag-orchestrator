@@ -270,8 +270,23 @@ class VectorSearchManager:
                 ),
             )
 
+            # 검색 결과 검증
+            if not search_result.ids:
+                log.warning(
+                    f"⚠️ 크로마 DB 검색 결과가 비어있습니다. "
+                    f"query_with_ranking이 빈 결과를 반환했습니다."
+                )
+                return []
+
             # UnifiedSearchResult로 변환
             unified_results = []
+            filtered_count = 0
+            
+            log.info(
+                f"🔍 크로마 DB 검색 결과 분석: 총 {len(search_result.ids)}개, "
+                f"임계값={context.similarity_threshold:.3f}"
+            )
+            
             for i, (doc_id, document, metadata, distance) in enumerate(
                 zip(
                     search_result.ids,
@@ -282,6 +297,13 @@ class VectorSearchManager:
             ):
                 # 거리를 유사도 점수로 변환 (cosine distance -> similarity)
                 similarity_score = 1.0 - distance
+                
+                log.info(
+                    f"크로마 결과 {i+1}: 거리={distance:.3f}, "
+                    f"유사도={similarity_score:.3f}, "
+                    f"임계값={context.similarity_threshold:.3f}, "
+                    f"통과={'✅' if similarity_score >= context.similarity_threshold else '❌'}"
+                )
 
                 # 검색 임계값 필터링 (여전히 적용)
                 if similarity_score >= context.similarity_threshold:
@@ -296,10 +318,13 @@ class VectorSearchManager:
                             context_length=len(document),
                         )
                     )
+                else:
+                    filtered_count += 1
 
             chroma_time = time.time() - chroma_start
             log.info(
                 f"🗄️ 비동기 크로마 DB 검색 완료: {len(unified_results)}개 결과, "
+                f"필터링됨={filtered_count}개, "
                 f"소요시간={chroma_time:.3f}s (정렬 및 중복 제거 적용됨)"
             )
             return unified_results
@@ -325,12 +350,31 @@ class VectorSearchManager:
                 ),
             )
 
+            # 유사도 임계값 필터링 전 로그
+            log.info(
+                f"🔍 PDF 실시간 검색 결과 분석: 총 {len(pdf_chunks)}개, "
+                f"임계값={context.similarity_threshold:.3f}"
+            )
+            
+            for i, (chunk, score) in enumerate(pdf_chunks):
+                log.info(
+                    f"PDF 결과 {i+1}: 유사도={score:.3f}, "
+                    f"임계값={context.similarity_threshold:.3f}, "
+                    f"통과={'✅' if score >= context.similarity_threshold else '❌'}"
+                )
+            
             # 유사도 임계값 필터링
             filtered_chunks = [
                 (chunk, score)
                 for chunk, score in pdf_chunks
                 if score >= context.similarity_threshold
             ]
+            
+            filtered_count = len(pdf_chunks) - len(filtered_chunks)
+            log.info(
+                f"📊 PDF 필터링 결과: {len(pdf_chunks)}개 → {len(filtered_chunks)}개 "
+                f"(필터링됨: {filtered_count}개)"
+            )
 
             # UnifiedSearchResult로 변환
             unified_results = []

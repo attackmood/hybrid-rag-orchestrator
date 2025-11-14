@@ -347,12 +347,24 @@ class HybridRouter:
                 "processing_stage": "completed",
             }
 
+        # RAG 결과(knowledge_base)가 포함된 경우 항상 LLM 통합
+        has_rag_results = any(
+            tool_name == "knowledge_base" or tool_name.startswith("knowledge_base_")
+            for tool_name, _, _ in filtered_results
+        )
+
         # 복잡도 기반 통합 전략 선택
-        if complexity_score < 0.3 and len(filtered_results) == 1:
-            # 간단한 쿼리 + 단일 도구: 직접 답변
+        if has_rag_results:
+            # RAG 결과가 포함된 경우: 항상 LLM 통합 (구조화된 데이터 활용)
+            log.info(
+                f"RAG 결과 감지: LLM 통합 수행 (복잡도={complexity_score:.2f}, "
+                f"결과 수={len(filtered_results)})"
+            )
+            final_answer = await self._integrate_with_llm(query, filtered_results)
+        elif complexity_score < 0.3 and len(filtered_results) == 1:
+            # 간단한 쿼리 + 단일 도구 (RAG 제외): 직접 답변
             tool_name, result, score = filtered_results[0]
             final_answer = result.content
-
         elif complexity_score > 0.5 or len(filtered_results) > 2:
             # 복잡한 쿼리 또는 다중 도구: LLM 통합
             final_answer = await self._integrate_with_llm(query, filtered_results)
@@ -381,15 +393,30 @@ class HybridRouter:
     async def _integrate_with_llm(self, query: str, filtered_results: list) -> str:
         """LLM을 사용한 지능형 결과 통합"""
         try:
+            # RAG 결과 포함 여부 확인
+            has_rag = any(
+                tool_name == "knowledge_base" or tool_name.startswith("knowledge_base_")
+                for tool_name, _, _ in filtered_results
+            )
+
             # 결과를 구조화된 텍스트로 변환
             collected_info = []
             for tool_name, result, score in filtered_results:
+                # RAG 결과는 이미 구조화된 형식이므로 그대로 사용
                 collected_info.append(
                     f"[{tool_name}] (신뢰도: {score:.2f})\n{result.content}"
                 )
 
-            system_prompt = """당신은 정보 통합 전문가입니다.
-            여러 소스의 정보를 종합하여 일관성 있고 유용한 답변을 제공하세요."""
+            # RAG 결과가 포함된 경우 더 상세한 프롬프트 사용
+            if has_rag:
+                system_prompt = """당신은 문서 기반 정보 통합 전문가입니다.
+                여러 소스(저장된 문서, 실시간 PDF 등)에서 수집된 정보를 종합하여 
+                일관성 있고 정확한 답변을 제공하세요. 
+                각 소스의 메타데이터(파일명, 페이지, 유사도 점수 등)를 참고하여 
+                가장 관련성 높은 정보를 우선적으로 활용하세요."""
+            else:
+                system_prompt = """당신은 정보 통합 전문가입니다.
+                여러 소스의 정보를 종합하여 일관성 있고 유용한 답변을 제공하세요."""
 
             user_prompt = f"""
             질문: {query}
