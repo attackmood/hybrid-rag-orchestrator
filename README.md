@@ -152,6 +152,23 @@ sequenceDiagram
 
 
 ---
+## 미리보기
+- **🌤️ Weather**: MCP 기반 날씨 정보 조회
+
+<img src="weather.png" alt="Weather Tool Preview" width="550" style="margin:20px;"/>
+
+- **📚 Knowledge Base**: RAG 기반 문서 검색
+
+<img src="rag.png" alt="RAG Tool Preview" width="550" style="margin:20px;"/>
+
+</div>
+
+
+
+
+
+
+
 
 **이 프로젝트는 AI 개발 학습 과정에서 만들어진 토이 프로젝트입니다.** 
 더 자세한 내용은 [SERVICE_ARCHITECTURE.md](./SERVICE_ARCHITECTURE.md)와 [IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)를 참고하세요.
